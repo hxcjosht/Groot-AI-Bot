@@ -1,71 +1,81 @@
-import speech_recognition as sr
+import os
 from pygame import mixer
 import random
-import RPi.gpio as GPIO
+import RPi.GPIO as GPIO
 from time import sleep
+from pocketsphinx import LiveSpeech, get_model_path
 
-
-#Body of Groot Movements
-
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(11, GPIO.OUT)
-GPIO.setup(14, GPIO.OUT)
-
-up= 2.5
+up=2.5
 down=12
-neutral= 7.5
+neutral=7.5
 left=1
 right=15
 
-arm=GPIO.PWM(11,50)
-head=GPIO.PWM(14,50)
+#Body of Groot Movements
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+GPIO.setup(18, GPIO.OUT)
+GPIO.setup(13, GPIO.OUT)
+GPIO.output(18,GPIO.LOW)
+
+
+arm=GPIO.PWM(18,1000)
+head=GPIO.PWM(13,1000)
+arm.start(0)
+head.start(0)
+
+def destroy():
+    arm.stop()
+    #GPIO.output(18,GPIO.LOW)
+    GPIO.cleanup()
+
+
 def movement():
-    arm.ChangeDutyCycle(up)
-    head.ChangeDutyCycle(left)
-    sleep(.1)
-    arm.ChangeDutyCycle(down)
-    head.ChangeDutyCycle(right)
-    sleep(.1)
-    arm.ChangeDutyCycle(neutral)
-    head.ChangeDutyCycle(neutral)
+    while True:
+        
+        arm.ChangeDutyCycle(100)
+            #head.ChangeDutyCycle(left)
+        sleep(1)
+        arm.ChangeDutyCycle(0)
+            #head.ChangeDutyCycle(right)
+        sleep(1)
+        
+        arm.ChangeDutyCycle(50)
+            #head.ChangeDutyCycle(neutral)
+    destroy()
 
 
 
 #Groot Audio and Responses
-soundboard=[""]
-
 mixer.init()
+soundboard=["groot_1.mp3","groot_2.mp3","groot_3.mp3","groot_4.mp3","groot_5.mp3","groot_6.mp3","groot_7.mp3"]
 
 def groot_voice():
-    voice= soundboard[random.randrange(0,4)]
+    voice= soundboard[random.randrange(0,6)]
     mixer.music.load(voice)
     mixer.music.play()
 
 
-def get_audio():
-    r = sr.Recognizer()
-    with sr.Microphone() as source:
-        audio = r.listen(source)
-        said = ""
+model_path = get_model_path()
 
-        try:
-            said = r.recognize_google(audio)
-            print(said)
-        except Exception as e:
-            print("Exception: " + str(e))
-
-    return said.lower()
+speech = LiveSpeech(
+    sampling_rate=16000,
+    dic='/home/raspberry/Documents/groot/groot_library.dict'
+)
 
 
-
-WAKE = "groot"
-print("Start")
-
-while True:
-    print("Listening")
-    text = get_audio()
-
-    if text.count(WAKE) > 0:
-        groot_voice()
+for phrase in speech:
+    phrase=str(phrase)
+    print(phrase)
+    substring= "groot"
+    if substring in phrase:
+    
+        #groot_voice()
         movement()
-        
+       
+    else:
+        print("THATS A BIG NOPE DUDE")
+    
+    
+
